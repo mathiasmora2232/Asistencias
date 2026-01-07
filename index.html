@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Asistencia</title>
+    <link href="static/style.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Modal selector de usuario (se muestra antes de usar el formulario) -->
+    <div id="user-modal" class="user-modal-backdrop" aria-hidden="true">
+        <div class="user-modal">
+            <h2>Selecciona tu usuario</h2>
+            <p>Elige uno para continuar al registro.</p>
+            <div class="user-list">
+                <button type="button" class="user-btn" data-user="Klever">Klever</button>
+                <button type="button" class="user-btn" data-user="Luis">Luis</button>
+                <button type="button" class="user-btn" data-user="Raquel">Raquel</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Lado izquierdo: Logo y fondo -->
+        <div class="left-section">
+            <img src="static/iguanaLogo2.jpeg" alt="Iguana Digital">
+        </div>
+
+        <!-- Lado derecho: Formulario de Registro -->
+        <div class="right-section">
+            <h1>Registro de Asistencia</h1>
+
+            <!-- Mensaje de estado (se actualiza por JS si aplica) -->
+            <div id="status-msg" class="alert-success" style="display:none"></div>
+
+            <!-- Formulario de Registro -->
+            <form method="POST">
+                <div class="mb-3">
+                    <label for="nombre" class="form-label">Nombre:</label>
+                    <input type="text" class="form-control" id="nombre" name="nombre" required placeholder="Ingresa tu nombre">
+                </div>
+
+                <div class="mb-3">
+                    <label for="accion" class="form-label">¿Qué desea registrar?</label>
+                    <select class="form-select" id="accion" name="accion" required>
+                        <option value="entrada">Hora de Entrada</option>
+                        <option value="salida">Hora de Salida</option>
+                        <option value="almuerzo_inicio">Hora de Inicio de Almuerzo</option>
+                        <option value="almuerzo_fin">Hora de Fin de Almuerzo</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label for="hora" class="form-label">Hora (HH:MM)</label>
+                    <input type="time" class="form-control" id="hora" name="hora" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Registrar</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- JS para manejar el selector de usuario -->
+    <script src="static/site.js"></script>
+</body>
+</html>
