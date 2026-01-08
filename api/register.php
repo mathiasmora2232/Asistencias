@@ -85,15 +85,15 @@ try {
 
     $hash = password_hash($password, PASSWORD_DEFAULT);
 
-    $stmt = pdo()->prepare('INSERT INTO usuarios (nombre, usuario, email, password_hash, role) VALUES (:n, :u, :e, :p, :r)');
+    $sql = 'INSERT INTO usuarios (`nombre`, `usuario`, `email`, `password_hash`, `role`) VALUES (:n, :u, :e, :p, :r)';
+    $stmt = pdo()->prepare($sql);
     try {
-        $stmt->execute([
-            ':n' => ($nombre !== '' ? $nombre : $usuario),
-            ':u' => $usuario,
-            ':e' => $email,
-            ':p' => $hash,
-            ':r' => $role,
-        ]);
+        $stmt->bindValue(':n', ($nombre !== '' ? $nombre : $usuario), PDO::PARAM_STR);
+        $stmt->bindValue(':u', $usuario !== '' ? $usuario : null, $usuario !== '' ? PDO::PARAM_STR : PDO::PARAM_NULL);
+        $stmt->bindValue(':e', $email, PDO::PARAM_STR);
+        $stmt->bindValue(':p', $hash, PDO::PARAM_STR);
+        $stmt->bindValue(':r', $role, PDO::PARAM_STR);
+        $stmt->execute();
         echo json_encode(['ok' => true, 'id' => (int)pdo()->lastInsertId(), 'usuario' => $usuario, 'role' => $role]);
         exit;
     } catch (PDOException $ex) {

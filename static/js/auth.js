@@ -19,6 +19,18 @@
     return data;
   }
 
+  async function registerSimple(usuario, password, role){
+    const res = await fetch('../api/register.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ usuario, password, role })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.error || 'register_failed');
+    return data;
+  }
+
   document.addEventListener('DOMContentLoaded', async () => {
     const status = await checkStatus();
     if (status && status.user) {
@@ -43,6 +55,33 @@
           location.href = './dashboard.html';
         } catch (err) {
           if (msg) { msg.textContent = 'Credenciales inválidas'; msg.classList.remove('hidden'); }
+        }
+      });
+    }
+
+    // Registro simple (temporal)
+    const regBtn = document.getElementById('btn-register');
+    const regMsg = document.getElementById('register-status');
+    if (regBtn) {
+      regBtn.addEventListener('click', async () => {
+        const u = (document.getElementById('reg-usuario')?.value || '').trim();
+        const p = (document.getElementById('reg-password')?.value || '').trim();
+        const r = (document.getElementById('reg-role')?.value || 'user');
+        if (!u || !p) {
+          if (regMsg) { regMsg.textContent = 'Usuario y contraseña requeridos'; regMsg.classList.remove('hidden'); }
+          return;
+        }
+        try {
+          await registerSimple(u, p, r);
+          if (regMsg) { regMsg.textContent = 'Cuenta creada. Iniciando sesión...'; regMsg.classList.remove('hidden'); }
+          await login(u, p);
+          location.href = './dashboard.html';
+        } catch (err) {
+          const error = String(err && err.message || 'register_failed');
+          if (regMsg) {
+            regMsg.textContent = (error === 'duplicate_user') ? 'El usuario ya existe' : 'Error al registrar';
+            regMsg.classList.remove('hidden');
+          }
         }
       });
     }

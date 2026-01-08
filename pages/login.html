@@ -19,6 +19,24 @@
       <input id="password" name="password" class="form-control" type="password" placeholder="••••••••" required>
       <button type="submit" class="btn-primary">Entrar</button>
     </form>
+
+    <hr style="margin:16px 0; border:none; border-top:1px solid #e5e7eb">
+    <details id="register-box">
+      <summary style="cursor:pointer; font-weight:700; color:#1e3a8a;">Crear cuenta (temporal)</summary>
+      <div style="margin-top:12px">
+        <div id="register-status" class="alert-success hidden" aria-live="polite"></div>
+        <label for="reg-usuario">Usuario</label>
+        <input id="reg-usuario" class="form-control" type="text" placeholder="usuario" autocomplete="username">
+        <label for="reg-password">Contraseña</label>
+        <input id="reg-password" class="form-control" type="password" placeholder="••••••••" autocomplete="new-password">
+        <label for="reg-role">Rol</label>
+        <select id="reg-role" class="form-select">
+          <option value="user" selected>Usuario</option>
+          <option value="admin">Admin (pruebas)</option>
+        </select>
+        <button id="btn-register" class="btn-primary" type="button">Crear cuenta y entrar</button>
+      </div>
+    </details>
   </div>
   <script src="../static/js/auth.js"></script>
 </body>
