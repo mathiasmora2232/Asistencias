@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Asistencias</title>
+  <link href="../static/style.css" rel="stylesheet">
+  <link rel="icon" type="image/x-icon" href="../static/img/favicon.ico">
+</head>
+<body>
+  <div class="nav">
+    <a href="#users" class="active" id="tab-users" aria-controls="panel-users">Usuarios</a>
+    <a href="#asistencias" id="tab-asist" aria-controls="panel-asist">Asistencias</a>
+    <div style="margin-left:auto">
+      <button id="btn-logout" class="user-btn" style="padding:8px 10px">Salir</button>
+    </div>
+  </div>
+
+  <div class="grid" id="panel-users">
+    <h2>Gestión de Usuarios</h2>
+    <div class="split">
+      <div>
+        <h3>Crear usuario</h3>
+        <form id="form-create-user">
+          <label for="u_nombre">Nombre</label>
+          <input class="form-control" id="u_nombre" name="u_nombre" required placeholder="Nombre completo">
+          <label for="u_usuario">Usuario (opcional)</label>
+          <input class="form-control" id="u_usuario" name="u_usuario" placeholder="Alias de usuario">
+          <label for="u_email">Email</label>
+          <input class="form-control" id="u_email" name="u_email" type="email" required placeholder="email@dominio.com">
+          <label for="u_password">Contraseña</label>
+          <input class="form-control" id="u_password" name="u_password" type="password" required placeholder="••••••••">
+          <label for="u_role">Rol</label>
+          <select class="form-select" id="u_role" name="u_role" aria-label="Rol de usuario">
+            <option value="user">Usuario</option>
+            <option value="admin">Administrador</option>
+          </select>
+          <button class="btn-primary" type="submit">Crear</button>
+        </form>
+        <div id="u_create_msg" class="alert-success hidden" aria-live="polite"></div>
+      </div>
+      <div>
+        <h3>Listado</h3>
+        <label for="u_search">Buscar</label>
+        <input class="form-control" id="u_search" name="u_search" placeholder="Buscar por nombre, usuario o email" aria-label="Buscar usuarios">
+        <table>
+          <thead>
+            <tr><th>Nombre</th><th>Usuario</th><th>Email</th><th>Rol</th><th>Acciones</th></tr>
+          </thead>
+          <tbody id="u_table"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid hidden" id="panel-asist" aria-hidden="true">
+    <h2>Asistencias</h2>
+    <div class="split">
+      <div>
+        <h3>Filtros</h3>
+        <label for="a_uid">Usuario ID (opcional)</label>
+        <input class="form-control" id="a_uid" name="a_uid" type="number" placeholder="ID de usuario">
+        <label for="a_type">Acción</label>
+        <select class="form-select" id="a_type" name="a_type" aria-label="Tipo de acción">
+          <option value="">Todas</option>
+          <option value="entrada">Entrada</option>
+          <option value="salida">Salida</option>
+          <option value="almuerzo_inicio">Almuerzo inicio</option>
+          <option value="almuerzo_fin">Almuerzo fin</option>
+        </select>
+        <label for="a_start">Fecha inicio</label>
+        <input class="form-control" id="a_start" name="a_start" type="date" aria-label="Fecha inicio">
+        <label for="a_end">Fecha fin</label>
+        <input class="form-control" id="a_end" name="a_end" type="date" aria-label="Fecha fin">
+        <label for="a_group">Agrupar por</label>
+        <select class="form-select" id="a_group" name="a_group" aria-label="Agrupar por">
+          <option value="day">Día</option>
+          <option value="week">Semana</option>
+          <option value="month">Mes</option>
+        </select>
+        <button id="btn-asist-agg" class="btn-primary" type="button">Buscar agregados</button>
+        <button id="btn-asist-list" class="btn-primary" type="button">Listar registros</button>
+      </div>
+      <div>
+        <h3>Resultados</h3>
+        <table>
+          <thead id="a_thead"></thead>
+          <tbody id="a_tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="../static/js/dashboard.js"></script>
+</body>
+</html>

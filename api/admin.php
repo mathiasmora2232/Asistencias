@@ -85,6 +85,46 @@ try {
         exit;
     }
 
+    // Inicialización: crear/asegurar usuario admin con password "admin"
+    // No requiere sesión, pero sólo funciona si aún no hay admins o si el usuario "admin" ya existe.
+    if ($action === 'bootstrap.admin' && $method === 'POST') {
+        // ¿Ya hay algún admin en el sistema?
+        $hasAdmin = (int)pdo()->query("SELECT COUNT(*) FROM usuarios WHERE role = 'admin'")->fetchColumn();
+
+        // Intentar localizar usuario por alias típico
+        $stmtFind = pdo()->prepare('SELECT id, usuario, email, role FROM usuarios WHERE usuario = :u OR email = :e LIMIT 1');
+        $stmtFind->execute([':u' => 'admin', ':e' => 'admin@localhost']);
+        $existing = $stmtFind->fetch(PDO::FETCH_ASSOC);
+
+        $hash = password_hash('admin', PASSWORD_DEFAULT);
+
+        if ($existing) {
+            // Actualizar a rol admin y resetear contraseña
+            $stmt = pdo()->prepare('UPDATE usuarios SET role = "admin", password_hash = :p WHERE id = :id');
+            $stmt->execute([':p' => $hash, ':id' => (int)$existing['id']]);
+            echo json_encode(['ok' => true, 'id' => (int)$existing['id'], 'updated' => true]);
+            exit;
+        }
+
+        if ($hasAdmin > 0) {
+            http_response_code(409);
+            echo json_encode(['error' => 'already_initialized']);
+            exit;
+        }
+
+        // Crear usuario admin base
+        $stmtIns = pdo()->prepare('INSERT INTO usuarios (nombre, usuario, email, password_hash, role) VALUES (:n, :u, :e, :p, :r)');
+        $stmtIns->execute([
+            ':n' => 'Admin',
+            ':u' => 'admin',
+            ':e' => 'admin@localhost',
+            ':p' => $hash,
+            ':r' => 'admin',
+        ]);
+        echo json_encode(['ok' => true, 'id' => (int)pdo()->lastInsertId(), 'created' => true]);
+        exit;
+    }
+
     // Usuarios
     if ($action === 'users.list' && $method === 'GET') {
         requireAdmin();
@@ -97,6 +137,30 @@ try {
             $stmt = pdo()->query('SELECT id, nombre, usuario, email, role, created_at FROM usuarios ORDER BY nombre');
         }
         echo json_encode($stmt->fetchAll());
+        exit;
+    }
+
+    if ($action === 'users.create' && $method === 'POST') {
+        requireAdmin();
+        $nombre = trim((string)($data['nombre'] ?? ''));
+        $usuario = trim((string)($data['usuario'] ?? ''));
+        $email = trim((string)($data['email'] ?? ''));
+        $password = (string)($data['password'] ?? '');
+        $role = (string)($data['role'] ?? 'user');
+        if ($nombre === '' || $email === '' || $password === '' || !in_array($role, ['user','admin'], true)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'invalid_input']);
+            exit;
+        }
+        $hash = password_hash($password, PASSWORD_DEFAULT);
+        $stmt = pdo()->prepare('INSERT INTO usuarios (nombre, usuario, email, password_hash, role) VALUES (:n, :u, :e, :p, :r)');
+        try {
+            $stmt->execute([':n'=>$nombre, ':u'=>($usuario !== '' ? $usuario : null), ':e'=>$email, ':p'=>$hash, ':r'=>$role]);
+            echo json_encode(['ok' => true, 'id' => (int)pdo()->lastInsertId()]);
+        } catch (PDOException $ex) {
+            http_response_code(409);
+            echo json_encode(['error' => 'duplicate_user', 'detail' => $ex->getMessage()]);
+        }
         exit;
     }
 
@@ -154,6 +218,45 @@ try {
         $stmt = pdo()->prepare($sql);
         $stmt->execute($params);
         echo json_encode($stmt->fetchAll());
+        exit;
+    }
+
+    if ($action === 'asistencias.aggregate' && $method === 'GET') {
+        requireAdmin();
+        $group = (string)($_GET['group'] ?? 'day'); // day|week|month
+        $type = (string)($_GET['type'] ?? ''); // accion filter opcional
+        $uid = isset($_GET['usuario_id']) ? (int)$_GET['usuario_id'] : 0;
+        $start = (string)($_GET['start_date'] ?? '');
+        $end = (string)($_GET['end_date'] ?? '');
+
+        // Definir expresión de agrupación
+        if ($group === 'week') {
+            $grpExpr = 'YEARWEEK(a.fecha, 1)';
+            $grpAlias = 'week';
+        } elseif ($group === 'month') {
+            $grpExpr = "DATE_FORMAT(a.fecha, '%Y-%m')";
+            $grpAlias = 'month';
+        } else {
+            $grpExpr = 'a.fecha';
+            $grpAlias = 'day';
+        }
+
+        $sql = "SELECT $grpExpr AS grp, a.accion, COUNT(*) AS cnt
+                FROM asistencias a WHERE 1=1";
+        $params = [];
+        if ($uid) { $sql .= ' AND a.usuario_id = :uid'; $params[':uid'] = $uid; }
+        if ($type !== '') { $sql .= ' AND a.accion = :t'; $params[':t'] = $type; }
+        if ($start !== '') { $sql .= ' AND a.fecha >= :s'; $params[':s'] = $start; }
+        if ($end !== '') { $sql .= ' AND a.fecha <= :e'; $params[':e'] = $end; }
+        $sql .= ' GROUP BY grp, a.accion ORDER BY grp DESC, a.accion';
+        $stmt = pdo()->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll();
+        // Normalizar alias
+        $out = array_map(function($r) use ($grpAlias) {
+            return [ $grpAlias => $r['grp'], 'accion' => $r['accion'], 'count' => (int)$r['cnt'] ];
+        }, $rows);
+        echo json_encode($out);
         exit;
     }
 

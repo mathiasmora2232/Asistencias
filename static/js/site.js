@@ -14,13 +14,13 @@
   function showModal(){
     const m = document.getElementById('user-modal');
     if (!m) return;
-    m.style.display = 'flex';
+    m.classList.add('show');
     m.setAttribute('aria-hidden','false');
   }
   function hideModal(){
     const m = document.getElementById('user-modal');
     if (!m) return;
-    m.style.display = 'none';
+    m.classList.remove('show');
     m.setAttribute('aria-hidden','true');
   }
 
@@ -128,7 +128,7 @@
         const accion = document.getElementById('accion')?.value || 'entrada';
         const hora = document.getElementById('hora')?.value || '';
         if (!nombre || !hora) {
-          if (statusMsg) { statusMsg.textContent = 'Completa nombre y hora.'; statusMsg.style.display = 'block'; }
+          if (statusMsg) { statusMsg.textContent = 'Completa nombre y hora.'; statusMsg.classList.remove('hidden'); }
           return;
         }
         try {
@@ -139,13 +139,13 @@
           });
           const data = await res.json();
           if (res.ok && data?.ok) {
-            if (statusMsg) { statusMsg.textContent = '¡Registro guardado exitosamente!'; statusMsg.style.display = 'block'; }
+            if (statusMsg) { statusMsg.textContent = '¡Registro guardado exitosamente!'; statusMsg.classList.remove('hidden'); }
           } else {
             const msg = data?.error === 'duplicate_event' ? 'Evento duplicado (ya registrado).' : (data?.error || 'Error al guardar');
-            if (statusMsg) { statusMsg.textContent = msg; statusMsg.style.display = 'block'; }
+            if (statusMsg) { statusMsg.textContent = msg; statusMsg.classList.remove('hidden'); }
           }
         } catch (err) {
-          if (statusMsg) { statusMsg.textContent = 'Error de red o servidor.'; statusMsg.style.display = 'block'; }
+          if (statusMsg) { statusMsg.textContent = 'Error de red o servidor.'; statusMsg.classList.remove('hidden'); }
         }
       });
     }

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Asistencias</title>
+  <link href="../static/style.css" rel="stylesheet">
+  <link rel="icon" type="image/x-icon" href="../static/img/favicon.ico">
+</head>
+<body>
+  <div class="auth-card">
+    <h1>Iniciar Sesión</h1>
+    <p class="sub">Accede al panel de administración.</p>
+    <div id="auth-status" class="alert-success hidden" aria-live="polite"></div>
+    <form id="login-form">
+      <label for="email">Email o usuario</label>
+      <input id="email" name="email" class="form-control" type="text" placeholder="email@dominio.com" required>
+      <label for="password">Contraseña</label>
+      <input id="password" name="password" class="form-control" type="password" placeholder="••••••••" required>
+      <button type="submit" class="btn-primary">Entrar</button>
+    </form>
+  </div>
+  <script src="../static/js/auth.js"></script>
+</body>
+</html>

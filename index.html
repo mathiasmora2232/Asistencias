@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registro de Asistencia</title>
     <link href="static/style.css" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="static/img/favicon.ico">
 </head>
 <body>
     <!-- Modal selector de usuario (se muestra antes de usar el formulario) -->
@@ -23,7 +24,7 @@
     <div class="container">
         <!-- Lado izquierdo: Logo y fondo -->
         <div class="left-section">
-            <img src="static/iguanaLogo2.jpeg" alt="Iguana Digital">
+            <img src="static/img/iguanaLogo2.jpeg" alt="Iguana Digital">
         </div>
 
         <!-- Lado derecho: Formulario de Registro -->
@@ -31,7 +32,7 @@
             <h1>Registro de Asistencia</h1>
 
             <!-- Mensaje de estado (se actualiza por JS si aplica) -->
-            <div id="status-msg" class="alert-success" style="display:none"></div>
+            <div id="status-msg" class="alert-success hidden" aria-live="polite"></div>
 
             <!-- Formulario de Registro -->
             <form method="POST">
@@ -61,6 +62,6 @@
     </div>
 
     <!-- JS para manejar el selector de usuario -->
-    <script src="static/site.js"></script>
+    <script src="static/js/site.js"></script>
 </body>
 </html>
