@@ -54,6 +54,15 @@ Todos requieren sesión con rol `admin`.
 - `POST/GET api/asistencias.php?action=add|list`
   - Operaciones básicas de registro/listado sin sesión (para flujo mínimo).
 
+### Registro simple (temporal para pruebas)
+
+- `POST api/register.php`
+  - Body JSON o form: `{ usuario: string, password: string, role?: 'user'|'admin', nombre?: string, email?: string }`
+  - Respuesta: `{ ok: true, id, usuario, role }` o `409 duplicate_user` si ya existe `usuario`/`email`.
+  - Notas:
+    - Usa `password_hash()` por seguridad.
+    - Puedes desactivar este endpoint editando las banderas en [api/register.php](api/register.php) (`$ALLOW_PUBLIC_REGISTER` y `$ALLOW_PUBLIC_REGISTER_ADMIN`).
+
 ## Notas de seguridad
 
 - Las operaciones de administración requieren sesión y rol admin.
