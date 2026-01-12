@@ -59,7 +59,7 @@
         goBtn.addEventListener('click', () => { location.href = getDashboardPath(); });
         const logoutBtn = document.createElement('button'); logoutBtn.className = 'user-btn'; logoutBtn.textContent = 'Cerrar sesión';
         logoutBtn.addEventListener('click', async () => {
-          try { await fetch('../api/auth.php?action=logout', { credentials: 'same-origin' }); } catch {}
+          try { await fetch('../api/auth.php?action=logout', { method: 'POST', credentials: 'same-origin' }); } catch {}
           location.reload();
         });
         actions.appendChild(goBtn); actions.appendChild(logoutBtn); formContainer.appendChild(actions);

@@ -7,7 +7,7 @@
   }
 
   async function status(){ return api('../api/auth.php?action=status'); }
-  async function logout(){ try { await api('../api/auth.php?action=logout'); } catch {} }
+  async function logout(){ try { await api('../api/auth.php?action=logout', { method: 'POST' }); } catch {} }
 
   function isAdminStatus(st){
     if (!st) return false;
