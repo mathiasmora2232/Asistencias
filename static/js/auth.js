@@ -42,12 +42,8 @@
   }
 
   document.addEventListener('DOMContentLoaded', async () => {
-    const status = await checkStatus();
-    if (status && status.user && isAdminStatus(status)) {
-      // Admin ya logueado: ir al dashboard
-      location.href = getDashboardPath();
-      return;
-    }
+    // No hacer redirección automática aunque exista sesión: login manual requerido
+    // Si quieres mostrar estado de sesión, puedes obtenerlo con `checkStatus()`.
 
     const form = document.getElementById('login-form');
     const msg = document.getElementById('auth-status');
@@ -89,14 +85,7 @@
         }
         try {
           await registerSimple(u, p, r, e);
-          if (regMsg) { regMsg.textContent = 'Cuenta creada. Iniciando sesión...'; regMsg.classList.remove('hidden'); }
-          await login(e || u, p);
-          const st3 = await checkStatus();
-          if (st3 && isAdminStatus(st3)) {
-            location.href = getDashboardPath();
-          } else {
-            if (regMsg) { regMsg.textContent = 'Cuenta creada, pero sin permisos de administrador.'; regMsg.classList.remove('hidden'); }
-          }
+          if (regMsg) { regMsg.textContent = 'Cuenta creada. Por favor inicia sesión manualmente.'; regMsg.classList.remove('hidden'); }
         } catch (err) {
           const error = String(err && err.message || 'register_failed');
           if (regMsg) {
