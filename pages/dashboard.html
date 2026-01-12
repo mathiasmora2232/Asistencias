@@ -8,11 +8,13 @@
   <link rel="icon" type="image/x-icon" href="../static/img/favicon.ico">
 </head>
 <body>
-  <div class="nav">
-    <a href="#users" class="active" id="tab-users" aria-controls="panel-users">Usuarios</a>
-    <a href="#asistencias" id="tab-asist" aria-controls="panel-asist">Asistencias</a>
-    <div style="margin-left:auto">
-      <button id="btn-logout" class="user-btn" style="padding:8px 10px">Salir</button>
+  <div class="nav" role="navigation" aria-label="Menú principal">
+    <div>
+      <a href="#users" class="active" id="tab-users" aria-controls="panel-users">Usuarios</a>
+      <a href="#asistencias" id="tab-asist" aria-controls="panel-asist">Asistencias</a>
+    </div>
+    <div>
+      <button id="btn-logout" class="user-btn" style="padding:8px 12px">Salir</button>
     </div>
   </div>
 
@@ -43,12 +45,14 @@
         <h3>Listado</h3>
         <label for="u_search">Buscar</label>
         <input class="form-control" id="u_search" name="u_search" placeholder="Buscar por nombre, usuario o email" aria-label="Buscar usuarios">
+        <div class="table-wrapper">
         <table>
           <thead>
             <tr><th>Nombre</th><th>Usuario</th><th>Email</th><th>Rol</th><th>Acciones</th></tr>
           </thead>
           <tbody id="u_table"></tbody>
         </table>
+        </div>
       </div>
     </div>
   </div>
@@ -83,10 +87,12 @@
       </div>
       <div>
         <h3>Resultados</h3>
+        <div class="table-wrapper">
         <table>
           <thead id="a_thead"></thead>
           <tbody id="a_tbody"></tbody>
         </table>
+        </div>
       </div>
     </div>
   </div>
