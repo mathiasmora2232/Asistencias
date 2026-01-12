@@ -42,8 +42,29 @@
   }
 
   document.addEventListener('DOMContentLoaded', async () => {
-    // No hacer redirección automática aunque exista sesión: login manual requerido
-    // Si quieres mostrar estado de sesión, puedes obtenerlo con `checkStatus()`.
+    // No hacer redirección automática: mostrar estado y acciones si ya hay sesión
+    const st = await checkStatus();
+    if (st && st.user) {
+      const msg = document.getElementById('auth-status');
+      if (msg) {
+        const isAdmin = isAdminStatus(st);
+        msg.textContent = isAdmin ? 'Sesión activa como administrador.' : 'Sesión activa.';
+        msg.classList.remove('hidden');
+      }
+      const formContainer = document.getElementById('login-form')?.parentElement;
+      if (formContainer) {
+        const actions = document.createElement('div');
+        actions.style.display = 'flex'; actions.style.gap = '8px'; actions.style.marginTop = '8px';
+        const goBtn = document.createElement('button'); goBtn.className = 'user-btn'; goBtn.textContent = 'Ir al panel';
+        goBtn.addEventListener('click', () => { location.href = getDashboardPath(); });
+        const logoutBtn = document.createElement('button'); logoutBtn.className = 'user-btn'; logoutBtn.textContent = 'Cerrar sesión';
+        logoutBtn.addEventListener('click', async () => {
+          try { await fetch('../api/auth.php?action=logout', { credentials: 'same-origin' }); } catch {}
+          location.reload();
+        });
+        actions.appendChild(goBtn); actions.appendChild(logoutBtn); formContainer.appendChild(actions);
+      }
+    }
 
     const form = document.getElementById('login-form');
     const msg = document.getElementById('auth-status');

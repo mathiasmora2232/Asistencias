@@ -9,6 +9,13 @@
   async function status(){ return api('../api/auth.php?action=status'); }
   async function logout(){ try { await api('../api/auth.php?action=logout'); } catch {} }
 
+  function isAdminStatus(st){
+    if (!st) return false;
+    const v = (st.isAdmin !== undefined) ? st.isAdmin : st.role;
+    if (typeof v === 'string') return v === 'admin' || v === '1' || v === 'true';
+    return !!v;
+  }
+
   async function usersList(q){
     const url = '../api/admin.php?action=users.list' + (q ? ('&q=' + encodeURIComponent(q)) : '');
     return api(url);
@@ -119,7 +126,7 @@
 
   document.addEventListener('DOMContentLoaded', async () => {
     const st = await status();
-    if (!st || !st.user || !st.isAdmin){
+    if (!st || !st.user || !isAdminStatus(st)){
       alert('Acceso restringido. Inicia sesión como admin.');
       location.href = './login.html';
       return;
