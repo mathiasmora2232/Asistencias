@@ -62,6 +62,26 @@
     <div class="split">
       <div>
         <h3>Filtros</h3>
+        <h4>Agregar / Eliminar registro</h4>
+        <label for="a_add_uid">Usuario ID</label>
+        <input class="form-control" id="a_add_uid" name="a_add_uid" type="number" placeholder="ID de usuario">
+        <label for="a_add_fecha">Fecha</label>
+        <input class="form-control" id="a_add_fecha" name="a_add_fecha" type="date">
+        <label for="a_add_hora">Hora</label>
+        <input class="form-control" id="a_add_hora" name="a_add_hora" type="time">
+        <label for="a_add_accion">Acción</label>
+        <select class="form-select" id="a_add_accion" name="a_add_accion">
+          <option value="entrada">Entrada</option>
+          <option value="salida">Salida</option>
+          <option value="almuerzo_inicio">Almuerzo inicio</option>
+          <option value="almuerzo_fin">Almuerzo fin</option>
+        </select>
+        <label for="a_add_obs">Observación (opcional)</label>
+        <input class="form-control" id="a_add_obs" name="a_add_obs" placeholder="Observación">
+        <button id="btn-asist-add" class="btn-primary" type="button">Agregar registro</button>
+        <label for="a_del_id">Eliminar por ID</label>
+        <input class="form-control" id="a_del_id" name="a_del_id" type="number" placeholder="ID del registro">
+        <button id="btn-asist-del" class="btn-primary" type="button">Eliminar registro</button>
         <label for="a_uid">Usuario ID (opcional)</label>
         <input class="form-control" id="a_uid" name="a_uid" type="number" placeholder="ID de usuario">
         <label for="a_type">Acción</label>

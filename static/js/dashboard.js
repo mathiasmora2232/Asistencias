@@ -36,6 +36,16 @@
     const qs = new URLSearchParams(params || {}).toString();
     return api('../api/admin.php?action=asistencias.aggregate' + (qs ? ('&' + qs) : ''));
   }
+  async function asistAdd(payload){
+    return api('../api/admin.php?action=asistencias.add', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    });
+  }
+  async function asistDelete(id){
+    return api('../api/admin.php?action=asistencias.delete', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id })
+    });
+  }
 
   function renderUsers(rows){
     const tb = document.getElementById('u_table');
@@ -161,6 +171,25 @@
         end_date: (document.getElementById('a_end')?.value || ''),
       };
       try { const rows = await asistList(params); renderAsistList(rows); } catch {}
+    });
+    document.getElementById('btn-asist-add')?.addEventListener('click', async ()=>{
+      const payload = {
+        usuario_id: parseInt(document.getElementById('a_add_uid')?.value || 0, 10) || 0,
+        fecha: (document.getElementById('a_add_fecha')?.value || ''),
+        hora: (document.getElementById('a_add_hora')?.value || ''),
+        accion: (document.getElementById('a_add_accion')?.value || 'entrada'),
+        observacion: (document.getElementById('a_add_obs')?.value || null),
+      };
+      try {
+        await asistAdd(payload);
+        alert('Registro agregado');
+      } catch (err) { alert('Error al agregar registro'); }
+    });
+    document.getElementById('btn-asist-del')?.addEventListener('click', async ()=>{
+      const id = parseInt(document.getElementById('a_del_id')?.value || 0, 10) || 0;
+      if (!id) { alert('ID inválido'); return; }
+      if (!confirm('Eliminar registro de asistencia ID ' + id + '?')) return;
+      try { await asistDelete(id); alert('Registro eliminado'); } catch (err) { alert('Error al eliminar'); }
     });
   });
 })();

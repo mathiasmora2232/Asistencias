@@ -50,7 +50,8 @@ try {
     $action = $_GET['action'] ?? $_POST['action'] ?? ($data['action'] ?? 'status');
 
     if ($action === 'status') {
-        echo json_encode(['user' => currentUser()]);
+        $u = currentUser();
+        echo json_encode(['user' => $u, 'isAdmin' => !!($u && ($u['role'] ?? 'user') === 'admin')]);
         exit;
     }
 
