@@ -7,7 +7,121 @@
   <link href="../static/style.css" rel="stylesheet">
   <link rel="icon" type="image/x-icon" href="../static/img/favicon.ico">
 </head>
+<body><!doctype html>
+<html lang="es">
+<head>
+  
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="canonical" href="/login.html" />
+  <title>Página 3D | Iniciar sesión</title>
+  <link rel="stylesheet" href="css/base.css?v=20260107" />
+  <link rel="stylesheet" href="css/nav.css?v=20260107" />
+  <link rel="stylesheet" href="css/dynamic.css?v=20260107" />
+  <link rel="stylesheet" href="css/style.css?v=20251222" />
+</head>
 <body>
+  
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="logo" href="index.html">Página3D</a>
+      <button class="nav-toggle" aria-controls="main-nav" aria-expanded="false" aria-label="Menú">☰</button>
+      <nav id="main-nav" class="main-nav" aria-label="Principal">
+        <a href="index.html">Inicio</a>
+        <a href="productos.html">Productos</a>
+        <a href="contacto.html">Contacto</a>
+        <a href="solicitudes.html">Solicitudes</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="container section">
+      <h1 class="section-title">Cuenta</h1>
+
+      <div id="login-view">
+        <h3>Iniciar sesión</h3>
+        <form class="form" id="login-form">
+          <div class="form-row">
+            <label for="login-usuario">Usuario o Email</label>
+            <input id="login-usuario" type="text" required />
+          </div>
+          <div class="form-row">
+            <label for="login-pass">Contraseña</label>
+            <input id="login-pass" type="password" required />
+          </div>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <button class="btn btn-primary" type="submit">Entrar</button>
+            <a id="show-register" href="#">Crear cuenta</a>
+          </div>
+        </form>
+        <div id="login-msg" style="color: var(--danger);"></div>
+      </div>
+
+      <div id="register-view" class="hidden">
+        <h3>Crear cuenta</h3>
+        <form class="form" id="register-form">
+          <div class="form-row">
+            <label for="reg-nombre">Nombre</label>
+            <input id="reg-nombre" type="text" required />
+          </div>
+          <div class="form-row">
+            <label for="reg-usuario">Usuario</label>
+            <input id="reg-usuario" type="text" required />
+          </div>
+          <div class="form-row">
+            <label for="reg-email">Email</label>
+            <input id="reg-email" type="email" required />
+          </div>
+          <div class="form-row">
+            <label for="reg-pass">Contraseña</label>
+            <input id="reg-pass" type="password" required />
+          </div>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <button class="btn" type="submit">Crear cuenta</button>
+            <a id="show-login" href="#">Ya tengo cuenta</a>
+          </div>
+        </form>
+        <div id="reg-msg" style="color: var(--danger);"></div>
+      </div>
+
+      <!-- Modal éxito registro -->
+      <div id="reg-modal" class="modal hidden" aria-hidden="true">
+        <div class="modal-backdrop" data-close></div>
+        <div class="modal-dialog" role="dialog" aria-modal="true">
+          <button class="modal-close" data-close>&times;</button>
+          <div class="modal-content" style="grid-template-columns: 1fr;">
+            <div>
+              <h2>Cuenta creada correctamente</h2>
+              <p>Ya puedes iniciar sesión con tus credenciales.</p>
+              <button class="btn btn-primary" data-close>Cerrar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <div>
+        <strong>Página3D</strong>
+        <p>Soluciones en impresión 3D: prototipos, piezas funcionales y merchandising.</p>
+      </div>
+      <div class="footer-contact">
+        <p>Email: <a href="mailto:mathiasmoraflores30@gmail.com">mathiasmoraflores30@gmail.com</a></p>
+        <p>Tel: +593 961788696</p>
+      </div>
+      <div class="footer-copy">© 2025 Página3D. Todos los derechos reservados.</div>
+    </div>
+  </footer>
+
+  <script src="js/site.js?v=20251222" defer></script>
+  <script src="js/login.js?v=20251222" defer></script>
+</body>
+</html>
+
   <div class="auth-card">
     <h1>Iniciar Sesión</h1>
     <p class="sub">Accede al panel de administración.</p>
@@ -40,6 +154,6 @@
       </div>
     </details>
   </div>
-  <script src="../static/js/auth.js"></script>
+  <script src="../static/js/login.js"></script>
 </body>
 </html>
