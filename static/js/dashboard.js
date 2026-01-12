@@ -7,7 +7,12 @@
   }
 
   async function status(){ return api('../api/auth.php?action=status'); }
-  async function logout(){ try { await api('../api/auth.php?action=logout', { method: 'POST' }); } catch {} }
+  async function logout(){
+    try {
+      await fetch('../api/auth.php?action=logout', { method: 'POST', credentials: 'same-origin' });
+    } catch (e) {}
+    try { localStorage.removeItem('active_user'); } catch (e) {}
+  }
 
   function isAdminStatus(st){
     if (!st) return false;
