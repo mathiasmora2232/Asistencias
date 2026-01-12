@@ -47,6 +47,25 @@ function ensureAsistenciasTable(): void {
     $pdo->exec($sql);
 }
 
+function ensureJornadasTable(): void {
+    $pdo = pdo();
+    $sql = "CREATE TABLE IF NOT EXISTS jornadas (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        usuario_id INT NOT NULL,
+        hora_entrada TIME NOT NULL,
+        hora_salida TIME NOT NULL,
+        almuerzo_inicio TIME NULL,
+        almuerzo_fin TIME NULL,
+        tolerancia_min INT NOT NULL DEFAULT 5,
+        horas_extra_inicio TIME NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        CONSTRAINT fk_jornadas_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE ON UPDATE CASCADE,
+        UNIQUE KEY uk_jornada_usuario (usuario_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+    $pdo->exec($sql);
+}
+
 function currentUser(): ?array {
     if (!isset($_SESSION['uid'])) return null;
     $stmt = pdo()->prepare('SELECT id, nombre, usuario, email, role, created_at FROM usuarios WHERE id = :id');
@@ -74,6 +93,7 @@ function json_input(): array {
 try {
     ensureUsersTable();
     ensureAsistenciasTable();
+    ensureJornadasTable();
 
     $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
     $data = json_input();
@@ -294,6 +314,143 @@ try {
         $stmt = pdo()->prepare('DELETE FROM asistencias WHERE id = :id');
         $stmt->execute([':id' => $id]);
         echo json_encode(['ok' => true]);
+        exit;
+    }
+
+    // Jornadas (configuración por empleado)
+    if ($action === 'jornadas.get' && $method === 'GET') {
+        requireAdmin();
+        $uid = isset($_GET['usuario_id']) ? (int)$_GET['usuario_id'] : 0;
+        if (!$uid) { http_response_code(400); echo json_encode(['error'=>'invalid_id']); exit; }
+        $stmt = pdo()->prepare('SELECT usuario_id, hora_entrada, hora_salida, almuerzo_inicio, almuerzo_fin, tolerancia_min, horas_extra_inicio FROM jornadas WHERE usuario_id = :id');
+        $stmt->execute([':id' => $uid]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        echo json_encode($row ?: []);
+        exit;
+    }
+
+    if ($action === 'jornadas.set' && $method === 'POST') {
+        requireAdmin();
+        $uid = (int)($data['usuario_id'] ?? 0);
+        $he = (string)($data['hora_entrada'] ?? '09:00:00');
+        $hs = (string)($data['hora_salida'] ?? '18:00:00');
+        $ai = isset($data['almuerzo_inicio']) && $data['almuerzo_inicio'] !== '' ? (string)$data['almuerzo_inicio'] : null;
+        $af = isset($data['almuerzo_fin']) && $data['almuerzo_fin'] !== '' ? (string)$data['almuerzo_fin'] : null;
+        $tol = (int)($data['tolerancia_min'] ?? 5);
+        $hex = isset($data['horas_extra_inicio']) && $data['horas_extra_inicio'] !== '' ? (string)$data['horas_extra_inicio'] : null;
+        if (!$uid) { http_response_code(400); echo json_encode(['error'=>'invalid_input']); exit; }
+        // Upsert
+        $sql = 'INSERT INTO jornadas (usuario_id, hora_entrada, hora_salida, almuerzo_inicio, almuerzo_fin, tolerancia_min, horas_extra_inicio)
+                VALUES (:id, :he, :hs, :ai, :af, :tol, :hex)
+                ON DUPLICATE KEY UPDATE hora_entrada=VALUES(hora_entrada), hora_salida=VALUES(hora_salida), almuerzo_inicio=VALUES(almuerzo_inicio), almuerzo_fin=VALUES(almuerzo_fin), tolerancia_min=VALUES(tolerancia_min), horas_extra_inicio=VALUES(horas_extra_inicio)';
+        $stmt = pdo()->prepare($sql);
+        $stmt->execute([':id'=>$uid, ':he'=>$he, ':hs'=>$hs, ':ai'=>$ai, ':af'=>$af, ':tol'=>$tol, ':hex'=>$hex]);
+        echo json_encode(['ok'=>true]);
+        exit;
+    }
+
+    // Estadísticas de puntualidad/retraso
+    if ($action === 'stats.punctuality' && $method === 'GET') {
+        requireAdmin();
+        $group = (string)($_GET['group'] ?? 'day'); // day|week|month
+        $uid = isset($_GET['usuario_id']) ? (int)$_GET['usuario_id'] : 0;
+        $start = (string)($_GET['start_date'] ?? '');
+        $end = (string)($_GET['end_date'] ?? '');
+        if (!$uid || $start === '' || $end === '') { http_response_code(400); echo json_encode(['error'=>'invalid_input']); exit; }
+
+        // Jornada del usuario (obligatoria para comparar)
+        $j = pdo()->prepare('SELECT hora_entrada, hora_salida, tolerancia_min FROM jornadas WHERE usuario_id = :id');
+        $j->execute([':id'=>$uid]);
+        $jornada = $j->fetch(PDO::FETCH_ASSOC);
+        if (!$jornada) { http_response_code(409); echo json_encode(['error'=>'no_schedule']); exit; }
+
+        $stmt = pdo()->prepare("SELECT a.fecha,
+                 MIN(CASE WHEN a.accion='entrada' THEN a.hora END) AS primera_entrada,
+                 MAX(CASE WHEN a.accion='salida' THEN a.hora END) AS ultima_salida
+               FROM asistencias a
+               WHERE a.usuario_id = :uid AND a.fecha >= :s AND a.fecha <= :e
+               GROUP BY a.fecha
+               ORDER BY a.fecha");
+        $stmt->execute([':uid'=>$uid, ':s'=>$start, ':e'=>$end]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $tol = (int)($jornada['tolerancia_min'] ?? 5);
+        $data = [];
+        foreach ($rows as $r) {
+            $f = $r['fecha'];
+            $e1 = $r['primera_entrada'];
+            $s1 = $r['ultima_salida'];
+            $entryDiff = null; $exitDiff = null;
+            if ($e1) {
+                $q = pdo()->prepare("SELECT TIMESTAMPDIFF(MINUTE, CONCAT(:f,' ', :he), CONCAT(:f,' ', :e1)) AS diff");
+                $q->execute([':f'=>$f, ':he'=>$jornada['hora_entrada'], ':e1'=>$e1]);
+                $entryDiff = (int)$q->fetchColumn();
+            }
+            if ($s1) {
+                $q = pdo()->prepare("SELECT TIMESTAMPDIFF(MINUTE, CONCAT(:f,' ', :s1), CONCAT(:f,' ', :hs)) AS diff");
+                // Nota: diff positivo => salida antes de hora_salida? Ajustamos para sentido correcto abajo
+                $q->execute([':f'=>$f, ':s1'=>$s1, ':hs'=>$jornada['hora_salida']]);
+                $exitDiff = (int)$q->fetchColumn();
+                // Queremos: positivo => después (overtime), negativo => temprano
+                $exitDiff = -$exitDiff;
+            }
+            $data[] = [
+                'fecha' => $f,
+                'entryDiff' => $entryDiff, // minutos (+ tarde, - temprano)
+                'exitDiff' => $exitDiff,   // minutos (+ después, - temprano)
+                'entryStatus' => ($entryDiff === null ? 'sin_registro' : (abs($entryDiff) <= $tol ? 'puntual' : ($entryDiff > 0 ? 'tarde' : 'temprano'))),
+                'exitStatus' => ($exitDiff === null ? 'sin_registro' : ($exitDiff < 0 ? 'temprano' : ($exitDiff > 0 ? 'tarde' : 'puntual'))),
+            ];
+        }
+
+        // Agrupar
+        $grouped = [];
+        foreach ($data as $d) {
+            $key = $d['fecha'];
+            if ($group === 'week') {
+                $stmtG = pdo()->prepare("SELECT YEARWEEK(:f, 1)");
+                $stmtG->execute([':f'=>$d['fecha']]);
+                $key = (string)$stmtG->fetchColumn();
+            } elseif ($group === 'month') {
+                $stmtG = pdo()->prepare("SELECT DATE_FORMAT(:f, '%Y-%m')");
+                $stmtG->execute([':f'=>$d['fecha']]);
+                $key = (string)$stmtG->fetchColumn();
+            }
+            if (!isset($grouped[$key])) {
+                $grouped[$key] = [
+                    'group' => $key,
+                    'on_time' => 0,
+                    'late' => 0,
+                    'early' => 0,
+                    'early_exit' => 0,
+                    'overtime' => 0,
+                    'avg_entry_diff_min' => 0,
+                    'avg_exit_diff_min' => 0,
+                    '_c_entry' => 0,
+                    '_c_exit' => 0,
+                ];
+            }
+            $g =& $grouped[$key];
+            if ($d['entryStatus'] === 'puntual') $g['on_time']++;
+            elseif ($d['entryStatus'] === 'tarde') $g['late']++;
+            elseif ($d['entryStatus'] === 'temprano') $g['early']++;
+            if ($d['exitStatus'] === 'temprano') $g['early_exit']++;
+            elseif ($d['exitStatus'] === 'tarde') $g['overtime']++;
+            if ($d['entryDiff'] !== null) { $g['avg_entry_diff_min'] += $d['entryDiff']; $g['_c_entry']++; }
+            if ($d['exitDiff'] !== null) { $g['avg_exit_diff_min'] += $d['exitDiff']; $g['_c_exit']++; }
+        }
+        // Finalizar promedios
+        $out = array_values(array_map(function($g){
+            if ($g['_c_entry'] > 0) $g['avg_entry_diff_min'] = round($g['avg_entry_diff_min'] / $g['_c_entry']);
+            else $g['avg_entry_diff_min'] = null;
+            if ($g['_c_exit'] > 0) $g['avg_exit_diff_min'] = round($g['avg_exit_diff_min'] / $g['_c_exit']);
+            else $g['avg_exit_diff_min'] = null;
+            unset($g['_c_entry'], $g['_c_exit']);
+            return $g;
+        }, $grouped));
+        // Ordenar por group desc
+        usort($out, function($a,$b){ return strcmp((string)$b['group'], (string)$a['group']); });
+        echo json_encode($out);
         exit;
     }
 

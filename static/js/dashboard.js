@@ -21,6 +21,19 @@
     return !!v;
   }
 
+  // Nuevas utilidades API
+  async function usersAll(){ return usersList(''); }
+  async function jornadaGet(usuario_id){ return api('../api/admin.php?action=jornadas.get&usuario_id=' + encodeURIComponent(usuario_id)); }
+  async function jornadaSet(payload){
+    return api('../api/admin.php?action=jornadas.set', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    });
+  }
+  async function statsPunctuality(params){
+    const qs = new URLSearchParams(params || {}).toString();
+    return api('../api/admin.php?action=stats.punctuality' + (qs ? ('&' + qs) : ''));
+  }
+
   async function usersList(q){
     const url = '../api/admin.php?action=users.list' + (q ? ('&q=' + encodeURIComponent(q)) : '');
     return api(url);
@@ -97,61 +110,90 @@
     const th = document.getElementById('a_thead');
     const tb = document.getElementById('a_tbody');
     if (!th || !tb) return;
-    th.innerHTML = '<tr><th>Grupo</th><th>Acción</th><th>Cantidad</th></tr>';
-    tb.innerHTML = '';
+    // Pivot: columnas por acción
+    const map = new Map();
     rows.forEach(r => {
-      const grp = r.day || r.week || r.month || '';
+      const key = r.day || r.week || r.month || '';
+      if (!map.has(key)) map.set(key, {entrada:0, salida:0, almuerzo_inicio:0, almuerzo_fin:0});
+      const obj = map.get(key);
+      obj[r.accion] = (obj[r.accion]||0) + (r.count||0);
+    });
+    th.innerHTML = '<tr><th>Grupo</th><th>Entrada</th><th>Salida</th><th>Alm. inicio</th><th>Alm. fin</th><th>Total</th></tr>';
+    tb.innerHTML = '';
+    [...map.entries()].sort((a,b)=>String(b[0]).localeCompare(String(a[0]))).forEach(([grp,obj])=>{
+      const total = (obj.entrada||0)+(obj.salida||0)+(obj.almuerzo_inicio||0)+(obj.almuerzo_fin||0);
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${grp}</td><td>${r.accion}</td><td>${r.count}</td>`;
+      tr.innerHTML = `<td>${grp}</td><td>${obj.entrada||0}</td><td>${obj.salida||0}</td><td>${obj.almuerzo_inicio||0}</td><td>${obj.almuerzo_fin||0}</td><td>${total}</td>`;
       tb.appendChild(tr);
     });
   }
 
   function showTab(id){
-    const pUsers = document.getElementById('panel-users');
-    const pAsist = document.getElementById('panel-asist');
-    const tUsers = document.getElementById('tab-users');
-    const tAsist = document.getElementById('tab-asist');
-    if (id === 'users'){
-      pUsers.classList.remove('hidden');
-      pUsers.setAttribute('aria-hidden','false');
-      pAsist.classList.add('hidden');
-      pAsist.setAttribute('aria-hidden','true');
-      tUsers.classList.add('active');
-      tAsist.classList.remove('active');
-    } else {
-      pUsers.classList.add('hidden');
-      pUsers.setAttribute('aria-hidden','true');
-      pAsist.classList.remove('hidden');
-      pAsist.setAttribute('aria-hidden','false');
-      tUsers.classList.remove('active');
-      tAsist.classList.add('active');
-    }
+    const panels = [
+      {id:'users', p:'panel-users', t:'tab-users'},
+      {id:'asist', p:'panel-asist', t:'tab-asist'},
+      {id:'stats', p:'panel-stats', t:'tab-stats'},
+      {id:'jornada', p:'panel-jornada', t:'tab-jornada'},
+    ];
+    panels.forEach(({id:pid,p,t})=>{
+      const panel = document.getElementById(p);
+      const tab = document.getElementById(t);
+      if (!panel || !tab) return;
+      const active = (pid === id);
+      panel.classList.toggle('hidden', !active);
+      panel.setAttribute('aria-hidden', active ? 'false' : 'true');
+      tab.classList.toggle('active', active);
+    });
   }
 
   document.addEventListener('DOMContentLoaded', async () => {
     const st = await status();
     if (!st || !st.user || !isAdminStatus(st)){
-      alert('Acceso restringido. Inicia sesión como admin.');
+      try { sessionStorage.setItem('notice', 'Acceso restringido. Inicia sesión como admin.'); } catch(e) {}
       location.href = './login.html';
       return;
     }
 
+    // Autorizado: mostrar el contenido del dashboard
+    try { document.body.style.display = ''; } catch(e) {}
+
     document.getElementById('btn-logout')?.addEventListener('click', async ()=>{ await logout(); location.href='./login.html'; });
     document.getElementById('tab-users')?.addEventListener('click', (e)=>{ e.preventDefault(); showTab('users'); });
     document.getElementById('tab-asist')?.addEventListener('click', (e)=>{ e.preventDefault(); showTab('asist'); });
+    document.getElementById('tab-stats')?.addEventListener('click', (e)=>{ e.preventDefault(); showTab('stats'); });
+    document.getElementById('tab-jornada')?.addEventListener('click', (e)=>{ e.preventDefault(); showTab('jornada'); });
 
-    // Usuarios list
+    // Usuarios list + filtros
+    let usersCache = [];
     async function refreshUsers(){
-      const q = (document.getElementById('u_search')?.value || '').trim();
-      try { const rows = await usersList(q); renderUsers(rows); } catch {}
+      const q = (document.getElementById('u_search')?.value || '').trim().toLowerCase();
+      const roleF = (document.getElementById('u_role_f')?.value || '');
+      const dFrom = (document.getElementById('u_created_from')?.value || '');
+      const dTo = (document.getElementById('u_created_to')?.value || '');
+      let rows = usersCache;
+      if (q) rows = rows.filter(r => (r.nombre||'').toLowerCase().includes(q) || (r.usuario||'').toLowerCase().includes(q) || (r.email||'').toLowerCase().includes(q));
+      if (roleF) rows = rows.filter(r => (r.role||'') === roleF);
+      if (dFrom) rows = rows.filter(r => (r.created_at||'') >= dFrom);
+      if (dTo) rows = rows.filter(r => (r.created_at||'') <= (dTo + ' 23:59:59'));
+      renderUsers(rows);
     }
-    document.getElementById('u_search')?.addEventListener('input', () => { refreshUsers(); });
-    await refreshUsers();
+    try { usersCache = await usersList(''); } catch { usersCache = []; }
+    ['u_search','u_role_f','u_created_from','u_created_to'].forEach(id => {
+      document.getElementById(id)?.addEventListener('input', refreshUsers);
+      document.getElementById(id)?.addEventListener('change', refreshUsers);
+    });
+    refreshUsers();
+
+    // Modal crear usuario
+    const mCreate = document.getElementById('modal-create-user');
+    const openCU = document.getElementById('btn-open-create-user');
+    const closeCU = document.getElementById('btn-close-create-user');
+    openCU?.addEventListener('click', ()=>{ mCreate?.classList.add('show'); mCreate?.setAttribute('aria-hidden','false'); });
+    closeCU?.addEventListener('click', ()=>{ mCreate?.classList.remove('show'); mCreate?.setAttribute('aria-hidden','true'); });
 
     // Crear usuario
     const f = document.getElementById('form-create-user');
-    const msg = document.getElementById('u_create_msg');
+    const msg = document.getElementById('u_create_msg') || document.getElementById('mc_msg');
     f?.addEventListener('submit', async (e)=>{
       e.preventDefault();
       const payload = {
@@ -161,15 +203,52 @@
         password: document.getElementById('u_password')?.value || '',
         role: document.getElementById('u_role')?.value || 'user',
       };
-      try { await userCreate(payload); msg.textContent='Usuario creado'; msg.classList.remove('hidden'); await refreshUsers(); }
+      try { await userCreate(payload); msg.textContent='Usuario creado'; msg.classList.remove('hidden'); try { mCreate?.classList.remove('show'); mCreate?.setAttribute('aria-hidden','true'); } catch{}; usersCache = await usersList(''); await refreshUsers(); }
       catch (err) { msg.textContent='Error al crear usuario'; msg.classList.remove('hidden'); }
     });
 
     // Asistencias
+    // Modal selección de usuario (reutilizable)
+    const mPicker = document.getElementById('modal-user-picker');
+    const muList = document.getElementById('mu_list');
+    const muSearch = document.getElementById('mu_search');
+    let muTarget = null; // 'a' | 's' | 'j'
+    let selectedUser = { a: null, s: null, j: null };
+    function setUserLabel(prefix, user){
+      const el = document.getElementById(prefix + '_user_label');
+      el.textContent = user ? (user.nombre || user.usuario || ('ID '+user.id)) : '';
+    }
+    async function openPicker(target){
+      muTarget = target;
+      try { usersCache = usersCache.length ? usersCache : await usersList(''); } catch {}
+      const list = usersCache.slice();
+      function renderPick(filter){
+        muList.innerHTML='';
+        list.filter(u => {
+          if (!filter) return true; const f = filter.toLowerCase();
+          return (u.nombre||'').toLowerCase().includes(f) || (u.usuario||'').toLowerCase().includes(f) || (u.email||'').toLowerCase().includes(f);
+        }).forEach(u => {
+          const b = document.createElement('button'); b.type='button'; b.className='user-btn';
+          b.textContent = `${u.nombre||u.usuario||('ID '+u.id)}`; b.addEventListener('click', ()=>{
+            selectedUser[target] = u; setUserLabel(target, u); mPicker.classList.remove('show'); mPicker.setAttribute('aria-hidden','true');
+            if (target==='j') loadJornada();
+          });
+          muList.appendChild(b);
+        });
+      }
+      renderPick('');
+      muSearch.value='';
+      muSearch.oninput = ()=>renderPick(muSearch.value);
+      mPicker.classList.add('show'); mPicker.setAttribute('aria-hidden','false');
+    }
+    document.getElementById('mu_close')?.addEventListener('click',()=>{ mPicker.classList.remove('show'); mPicker.setAttribute('aria-hidden','true'); });
+    document.getElementById('btn-open-user-picker-a')?.addEventListener('click', ()=>openPicker('a'));
+    document.getElementById('btn-open-user-picker-s')?.addEventListener('click', ()=>openPicker('s'));
+    document.getElementById('btn-open-user-picker-j')?.addEventListener('click', ()=>openPicker('j'));
+
     document.getElementById('btn-asist-agg')?.addEventListener('click', async ()=>{
       const params = {
-        usuario_id: (document.getElementById('a_uid')?.value || ''),
-        type: (document.getElementById('a_type')?.value || ''),
+        usuario_id: (selectedUser.a?.id || ''),
         start_date: (document.getElementById('a_start')?.value || ''),
         end_date: (document.getElementById('a_end')?.value || ''),
         group: (document.getElementById('a_group')?.value || 'day'),
@@ -178,7 +257,7 @@
     });
     document.getElementById('btn-asist-list')?.addEventListener('click', async ()=>{
       const params = {
-        usuario_id: (document.getElementById('a_uid')?.value || ''),
+        usuario_id: (selectedUser.a?.id || ''),
         start_date: (document.getElementById('a_start')?.value || ''),
         end_date: (document.getElementById('a_end')?.value || ''),
       };
@@ -202,6 +281,50 @@
       if (!id) { alert('ID inválido'); return; }
       if (!confirm('Eliminar registro de asistencia ID ' + id + '?')) return;
       try { await asistDelete(id); alert('Registro eliminado'); } catch (err) { alert('Error al eliminar'); }
+    });
+
+    // Estadísticas
+    async function loadStats(){
+      const uid = selectedUser.s?.id; if (!uid) { alert('Selecciona un usuario'); return; }
+      const params = {
+        usuario_id: uid,
+        group: (document.getElementById('s_group')?.value || 'day'),
+        start_date: (document.getElementById('s_start')?.value || ''),
+        end_date: (document.getElementById('s_end')?.value || ''),
+      };
+      try {
+        const rows = await statsPunctuality(params);
+        const tb = document.getElementById('s_table'); tb.innerHTML = '';
+        rows.forEach(r=>{
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${r.group}</td><td>${r.on_time}</td><td>${r.late}</td><td>${r.early}</td><td>${r.early_exit}</td><td>${r.overtime}</td><td>${r.avg_entry_diff_min ?? '-'}</td><td>${r.avg_exit_diff_min ?? '-'}</td>`;
+          tb.appendChild(tr);
+        });
+      } catch (e) { alert('No se pudieron calcular estadísticas. Asegura una jornada definida.'); }
+    }
+    document.getElementById('btn-stats-load')?.addEventListener('click', loadStats);
+
+    // Jornada
+    async function loadJornada(){
+      const uid = selectedUser.j?.id; if (!uid) return;
+      try { const j = await jornadaGet(uid); document.getElementById('j_he').value = (j?.hora_entrada || '09:00:00'); document.getElementById('j_hs').value = (j?.hora_salida || '18:00:00'); document.getElementById('j_ai').value = (j?.almuerzo_inicio || ''); document.getElementById('j_af').value = (j?.almuerzo_fin || ''); document.getElementById('j_tol').value = (j?.tolerancia_min ?? 5); document.getElementById('j_hex').value = (j?.horas_extra_inicio || ''); }
+      catch {}
+    }
+    document.getElementById('form-jornada')?.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const uid = selectedUser.j?.id; if (!uid) { alert('Selecciona un usuario'); return; }
+      const payload = {
+        usuario_id: uid,
+        hora_entrada: document.getElementById('j_he')?.value || '09:00:00',
+        hora_salida: document.getElementById('j_hs')?.value || '18:00:00',
+        almuerzo_inicio: document.getElementById('j_ai')?.value || null,
+        almuerzo_fin: document.getElementById('j_af')?.value || null,
+        tolerancia_min: parseInt(document.getElementById('j_tol')?.value || '5', 10) || 0,
+        horas_extra_inicio: document.getElementById('j_hex')?.value || null,
+      };
+      const msg = document.getElementById('j_msg');
+      try { await jornadaSet(payload); msg.textContent = 'Jornada guardada'; msg.classList.remove('hidden'); }
+      catch { msg.textContent = 'Error al guardar'; msg.classList.remove('hidden'); }
     });
   });
 })();

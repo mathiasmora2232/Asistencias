@@ -7,11 +7,13 @@
   <link href="../static/style.css" rel="stylesheet">
   <link rel="icon" type="image/x-icon" href="../static/img/favicon.ico">
 </head>
-<body>
+<body style="display:none">
   <div class="nav" role="navigation" aria-label="Menú principal">
     <div>
       <a href="#users" class="active" id="tab-users" aria-controls="panel-users">Usuarios</a>
       <a href="#asistencias" id="tab-asist" aria-controls="panel-asist">Asistencias</a>
+      <a href="#estadisticas" id="tab-stats" aria-controls="panel-stats">Estadísticas</a>
+      <a href="#jornada" id="tab-jornada" aria-controls="panel-jornada">Jornada</a>
     </div>
     <div>
       <button id="btn-logout" class="user-btn" style="padding:8px 12px">Cerrar sesión</button>
@@ -22,29 +24,25 @@
     <h2>Gestión de Usuarios</h2>
     <div class="split">
       <div>
-        <h3>Crear usuario</h3>
-        <form id="form-create-user">
-          <label for="u_nombre">Nombre</label>
-          <input class="form-control" id="u_nombre" name="u_nombre" required placeholder="Nombre completo">
-          <label for="u_usuario">Usuario (opcional)</label>
-          <input class="form-control" id="u_usuario" name="u_usuario" placeholder="Alias de usuario">
-          <label for="u_email">Email</label>
-          <input class="form-control" id="u_email" name="u_email" type="email" required placeholder="email@dominio.com">
-          <label for="u_password">Contraseña</label>
-          <input class="form-control" id="u_password" name="u_password" type="password" required placeholder="••••••••">
-          <label for="u_role">Rol</label>
-          <select class="form-select" id="u_role" name="u_role" aria-label="Rol de usuario">
-            <option value="user">Usuario</option>
-            <option value="admin">Administrador</option>
-          </select>
-          <button class="btn-primary" type="submit">Crear</button>
-        </form>
-        <div id="u_create_msg" class="alert-success hidden" aria-live="polite"></div>
+        <h3>Acciones</h3>
+        <button id="btn-open-create-user" class="btn-primary" type="button">Crear usuario</button>
+        <div class="hr-divider"></div>
+        <h3>Filtros</h3>
+        <label for="u_search">Buscar</label>
+        <input class="form-control" id="u_search" name="u_search" placeholder="Buscar por nombre, usuario o email" aria-label="Buscar usuarios">
+        <label for="u_role_f">Rol</label>
+        <select class="form-select" id="u_role_f">
+          <option value="">Todos</option>
+          <option value="user">Usuario</option>
+          <option value="admin">Administrador</option>
+        </select>
+        <label for="u_created_from">Creado desde</label>
+        <input class="form-control" id="u_created_from" type="date">
+        <label for="u_created_to">Creado hasta</label>
+        <input class="form-control" id="u_created_to" type="date">
       </div>
       <div>
         <h3>Listado</h3>
-        <label for="u_search">Buscar</label>
-        <input class="form-control" id="u_search" name="u_search" placeholder="Buscar por nombre, usuario o email" aria-label="Buscar usuarios">
         <div class="table-wrapper">
         <table>
           <thead>
@@ -53,6 +51,7 @@
           <tbody id="u_table"></tbody>
         </table>
         </div>
+        <div id="u_create_msg" class="alert-success hidden" aria-live="polite"></div>
       </div>
     </div>
   </div>
@@ -62,7 +61,25 @@
     <div class="split">
       <div>
         <h3>Filtros</h3>
-        <h4>Agregar / Eliminar registro</h4>
+        <div class="actions-row mt-8">
+          <button id="btn-open-user-picker-a" class="user-btn" type="button">Seleccionar usuario</button>
+          <span id="a_user_label"></span>
+        </div>
+        <label for="a_group">Agrupar por</label>
+        <select class="form-select" id="a_group" name="a_group" aria-label="Agrupar por">
+          <option value="day">Día</option>
+          <option value="week">Semana</option>
+          <option value="month">Mes</option>
+        </select>
+        <label for="a_start">Fecha inicio</label>
+        <input class="form-control" id="a_start" name="a_start" type="date" aria-label="Fecha inicio">
+        <label for="a_end">Fecha fin</label>
+        <input class="form-control" id="a_end" name="a_end" type="date" aria-label="Fecha fin">
+        <div class="actions-row mt-12">
+          <button id="btn-asist-agg" class="btn-primary" type="button">Ver agregados</button>
+          <button id="btn-asist-list" class="btn-primary" type="button">Listar registros</button>
+        </div>
+        <h4 class="mt-12">Agregar / Eliminar registro</h4>
         <label for="a_add_uid">Usuario ID</label>
         <input class="form-control" id="a_add_uid" name="a_add_uid" type="number" placeholder="ID de usuario">
         <label for="a_add_fecha">Fecha</label>
@@ -82,28 +99,6 @@
         <label for="a_del_id">Eliminar por ID</label>
         <input class="form-control" id="a_del_id" name="a_del_id" type="number" placeholder="ID del registro">
         <button id="btn-asist-del" class="btn-primary" type="button">Eliminar registro</button>
-        <label for="a_uid">Usuario ID (opcional)</label>
-        <input class="form-control" id="a_uid" name="a_uid" type="number" placeholder="ID de usuario">
-        <label for="a_type">Acción</label>
-        <select class="form-select" id="a_type" name="a_type" aria-label="Tipo de acción">
-          <option value="">Todas</option>
-          <option value="entrada">Entrada</option>
-          <option value="salida">Salida</option>
-          <option value="almuerzo_inicio">Almuerzo inicio</option>
-          <option value="almuerzo_fin">Almuerzo fin</option>
-        </select>
-        <label for="a_start">Fecha inicio</label>
-        <input class="form-control" id="a_start" name="a_start" type="date" aria-label="Fecha inicio">
-        <label for="a_end">Fecha fin</label>
-        <input class="form-control" id="a_end" name="a_end" type="date" aria-label="Fecha fin">
-        <label for="a_group">Agrupar por</label>
-        <select class="form-select" id="a_group" name="a_group" aria-label="Agrupar por">
-          <option value="day">Día</option>
-          <option value="week">Semana</option>
-          <option value="month">Mes</option>
-        </select>
-        <button id="btn-asist-agg" class="btn-primary" type="button">Buscar agregados</button>
-        <button id="btn-asist-list" class="btn-primary" type="button">Listar registros</button>
       </div>
       <div>
         <h3>Resultados</h3>
@@ -113,6 +108,111 @@
           <tbody id="a_tbody"></tbody>
         </table>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid hidden" id="panel-stats" aria-hidden="true">
+    <h2>Estadísticas</h2>
+    <div class="split">
+      <div>
+        <h3>Filtros</h3>
+        <div class="actions-row mt-8">
+          <button id="btn-open-user-picker-s" class="user-btn" type="button">Seleccionar usuario</button>
+          <span id="s_user_label"></span>
+        </div>
+        <label for="s_group">Agrupar por</label>
+        <select class="form-select" id="s_group">
+          <option value="day">Día</option>
+          <option value="week">Semana</option>
+          <option value="month">Mes</option>
+        </select>
+        <label for="s_start">Fecha inicio</label>
+        <input class="form-control" id="s_start" type="date">
+        <label for="s_end">Fecha fin</label>
+        <input class="form-control" id="s_end" type="date">
+        <button id="btn-stats-load" class="btn-primary" type="button">Calcular</button>
+      </div>
+      <div>
+        <h3>Resultados</h3>
+        <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>Grupo</th><th>Puntual</th><th>Tarde</th><th>Temprano</th><th>Salida temprana</th><th>Horas extra</th><th>Prom. min entrada</th><th>Prom. min salida</th></tr>
+          </thead>
+          <tbody id="s_table"></tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid hidden" id="panel-jornada" aria-hidden="true">
+    <h2>Configuración de jornada</h2>
+    <div class="split">
+      <div>
+        <div class="actions-row mt-8">
+          <button id="btn-open-user-picker-j" class="user-btn" type="button">Seleccionar usuario</button>
+          <span id="j_user_label"></span>
+        </div>
+        <form id="form-jornada" class="mt-12">
+          <label for="j_he">Hora entrada</label>
+          <input class="form-control" id="j_he" type="time" required>
+          <label for="j_hs">Hora salida</label>
+          <input class="form-control" id="j_hs" type="time" required>
+          <label for="j_ai">Almuerzo inicio</label>
+          <input class="form-control" id="j_ai" type="time">
+          <label for="j_af">Almuerzo fin</label>
+          <input class="form-control" id="j_af" type="time">
+          <label for="j_tol">Tolerancia (min)</label>
+          <input class="form-control" id="j_tol" type="number" min="0" value="5">
+          <label for="j_hex">Horas extra desde</label>
+          <input class="form-control" id="j_hex" type="time">
+          <button class="btn-primary" type="submit">Guardar</button>
+        </form>
+        <div id="j_msg" class="alert-success hidden" aria-live="polite"></div>
+      </div>
+      <div>
+        <p>Define el horario esperado por empleado. Las estadísticas usan estos valores para calcular puntualidad, retrasos y horas extra.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal crear usuario -->
+  <div id="modal-create-user" class="user-modal-backdrop" aria-hidden="true">
+    <div class="user-modal" role="dialog" aria-modal="true" aria-labelledby="mc_title">
+      <h2 id="mc_title">Crear usuario</h2>
+      <form id="form-create-user">
+        <label for="u_nombre">Nombre</label>
+        <input class="form-control" id="u_nombre" required placeholder="Nombre completo">
+        <label for="u_usuario">Usuario (opcional)</label>
+        <input class="form-control" id="u_usuario" placeholder="Alias de usuario">
+        <label for="u_email">Email</label>
+        <input class="form-control" id="u_email" type="email" required placeholder="email@dominio.com">
+        <label for="u_password">Contraseña</label>
+        <input class="form-control" id="u_password" type="password" required placeholder="••••••••">
+        <label for="u_role">Rol</label>
+        <select class="form-select" id="u_role">
+          <option value="user">Usuario</option>
+          <option value="admin">Administrador</option>
+        </select>
+        <div class="actions-row mt-12">
+          <button class="btn-primary" type="submit">Crear</button>
+          <button id="btn-close-create-user" type="button" class="user-btn">Cancelar</button>
+        </div>
+      </form>
+      <div id="mc_msg" class="alert-success hidden" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <!-- Modal selector de usuario (reutilizable) -->
+  <div id="modal-user-picker" class="user-modal-backdrop" aria-hidden="true">
+    <div class="user-modal" role="dialog" aria-modal="true" aria-labelledby="mu_title">
+      <h2 id="mu_title">Seleccionar usuario</h2>
+      <input id="mu_search" class="form-control" placeholder="Buscar...">
+      <div id="mu_list" class="user-list mt-12"></div>
+      <div class="actions-row mt-12">
+        <button id="mu_close" class="user-btn" type="button">Cerrar</button>
       </div>
     </div>
   </div>

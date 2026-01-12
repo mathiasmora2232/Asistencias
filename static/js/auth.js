@@ -42,6 +42,20 @@
   }
 
   document.addEventListener('DOMContentLoaded', async () => {
+    // Mostrar aviso si viene de acceso restringido
+    try {
+      const params = new URLSearchParams(location.search || '');
+      const stored = sessionStorage.getItem('notice');
+      if (stored || params.get('msg') === 'restricted') {
+        const box = document.getElementById('auth-status');
+        if (box) {
+          box.textContent = stored || 'Acceso restringido. Inicia sesión.';
+          box.classList.remove('hidden');
+        }
+        sessionStorage.removeItem('notice');
+      }
+    } catch(e) {}
+
     // No hacer redirección automática: mostrar estado y acciones si ya hay sesión
     const st = await checkStatus();
     if (st && st.user) {
