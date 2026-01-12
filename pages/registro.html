@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registro de Asistencias</title>
+  <link href="../static/style.css" rel="stylesheet">
+  <link rel="icon" type="image/x-icon" href="../static/img/favicon.ico">
+</head>
+<body>
+  <div class="grid max-720">
+    <h2>Registro de Asistencias</h2>
+    <div class="split">
+      <div>
+        <h3>Marcar</h3>
+        <div id="u-info" class="sub"></div>
+        <label for="r_fecha">Fecha</label>
+        <input id="r_fecha" name="r_fecha" class="form-control" type="date">
+        <label for="r_hora">Hora</label>
+        <input id="r_hora" name="r_hora" class="form-control" type="time">
+        <label for="r_accion">Acción</label>
+        <select id="r_accion" name="r_accion" class="form-select">
+          <option value="entrada">Entrada</option>
+          <option value="salida">Salida</option>
+          <option value="almuerzo_inicio">Almuerzo inicio</option>
+          <option value="almuerzo_fin">Almuerzo fin</option>
+        </select>
+        <label for="r_obs">Observación (opcional)</label>
+        <input id="r_obs" name="r_obs" class="form-control" placeholder="Comentario opcional">
+        <button id="btn-marcar" class="btn-primary" type="button">Marcar</button>
+        <div id="r_msg" class="alert-success hidden mt-8" aria-live="polite"></div>
+        <div class="actions-row mt-8">
+          <button id="btn-now" class="user-btn" type="button">Usar fecha/hora actual</button>
+          <button id="btn-logout" class="user-btn" type="button">Cerrar sesión</button>
+        </div>
+      </div>
+      <div>
+        <h3>Hoy</h3>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Hora</th><th>Acción</th><th>Obs</th></tr></thead>
+            <tbody id="r_table"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="../static/js/registro.js"></script>
+</body>
+</html>

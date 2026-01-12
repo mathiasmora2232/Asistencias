@@ -83,7 +83,10 @@
           if (st2 && isAdminStatus(st2)) {
             location.href = getDashboardPath();
           } else {
-            if (msg) { msg.textContent = 'Tu cuenta no tiene permisos de administrador.'; msg.classList.remove('hidden'); }
+            // Redirigir a página de registro de asistencias para usuarios
+            const p = (location.pathname || '').toLowerCase();
+            const userPage = p.includes('/login/') ? '../pages/registro.html' : './registro.html';
+            location.href = userPage;
           }
         } catch (err) {
           if (msg) { msg.textContent = 'Credenciales inválidas'; msg.classList.remove('hidden'); }

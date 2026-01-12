@@ -146,3 +146,11 @@ th, td { border-bottom: 1px solid #e5e7eb; padding:10px; text-align:left; }
 tbody tr:nth-child(even){ background:#f9fafb; }
 tbody tr:hover { background:#eef2ff; }
 .table-wrapper { width:100%; overflow:auto; border-radius: 10px; }
+
+/* Utilidades extras para accesibilidad/limpieza */
+.max-720 { max-width: 720px; }
+.mt-8 { margin-top: 8px; }
+.mt-12 { margin-top: 12px; }
+.actions-row { display: flex; gap: 8px; }
+.summary-toggle { cursor: pointer; font-weight: 700; color: #1e3a8a; }
+.hr-divider { margin:16px 0; border:none; border-top:1px solid #e5e7eb; }
