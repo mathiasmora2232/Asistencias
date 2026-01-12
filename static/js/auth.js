@@ -1,4 +1,14 @@
 (function(){
+  function getDashboardPath(){
+    const p = (location.pathname || '').toLowerCase();
+    return p.includes('/login/') ? '../pages/dashboard.html' : './dashboard.html';
+  }
+  function isAdminStatus(st){
+    if (!st) return false;
+    const v = (st.isAdmin !== undefined) ? st.isAdmin : st.role;
+    if (typeof v === 'string') return v === 'admin' || v === '1' || v === 'true';
+    return !!v;
+  }
   async function checkStatus(){
     try {
       const res = await fetch('../api/auth.php?action=status', { cache: 'no-store', credentials: 'same-origin' });
@@ -33,9 +43,9 @@
 
   document.addEventListener('DOMContentLoaded', async () => {
     const status = await checkStatus();
-    if (status && status.user) {
-      // Ya logueado: ir al dashboard
-      location.href = './dashboard.html';
+    if (status && status.user && isAdminStatus(status)) {
+      // Admin ya logueado: ir al dashboard
+      location.href = getDashboardPath();
       return;
     }
 
@@ -52,7 +62,12 @@
         }
         try {
           await login(id, pw);
-          location.href = './dashboard.html';
+          const st2 = await checkStatus();
+          if (st2 && isAdminStatus(st2)) {
+            location.href = getDashboardPath();
+          } else {
+            if (msg) { msg.textContent = 'Tu cuenta no tiene permisos de administrador.'; msg.classList.remove('hidden'); }
+          }
         } catch (err) {
           if (msg) { msg.textContent = 'Credenciales inválidas'; msg.classList.remove('hidden'); }
         }
@@ -76,7 +91,12 @@
           await registerSimple(u, p, r, e);
           if (regMsg) { regMsg.textContent = 'Cuenta creada. Iniciando sesión...'; regMsg.classList.remove('hidden'); }
           await login(e || u, p);
-          location.href = './dashboard.html';
+          const st3 = await checkStatus();
+          if (st3 && isAdminStatus(st3)) {
+            location.href = getDashboardPath();
+          } else {
+            if (regMsg) { regMsg.textContent = 'Cuenta creada, pero sin permisos de administrador.'; regMsg.classList.remove('hidden'); }
+          }
         } catch (err) {
           const error = String(err && err.message || 'register_failed');
           if (regMsg) {
