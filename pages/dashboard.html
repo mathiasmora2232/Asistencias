@@ -13,6 +13,7 @@
       <a href="#users" class="active" id="tab-users" aria-controls="panel-users">Usuarios</a>
       <a href="#asistencias" id="tab-asist" aria-controls="panel-asist">Asistencias</a>
       <a href="#estadisticas" id="tab-stats" aria-controls="panel-stats">Estadísticas</a>
+      <a href="#motivos" id="tab-motivos" aria-controls="panel-motivos">Motivos</a>
       <a href="#jornada" id="tab-jornada" aria-controls="panel-jornada">Jornada</a>
     </div>
     <div>
@@ -141,6 +142,35 @@
             <tr><th>Grupo</th><th>Puntual</th><th>Tarde</th><th>Temprano</th><th>Salida temprana</th><th>Horas extra</th><th>Prom. min entrada</th><th>Prom. min salida</th></tr>
           </thead>
           <tbody id="s_table"></tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid hidden" id="panel-motivos" aria-hidden="true">
+    <h2>Motivos</h2>
+    <div class="split">
+      <div>
+        <h3>Filtros</h3>
+        <div class="actions-row mt-8">
+          <button id="btn-open-user-picker-m" class="user-btn" type="button">Seleccionar usuario</button>
+          <span id="m_user_label"></span>
+        </div>
+        <label for="m_start">Fecha inicio</label>
+        <input class="form-control" id="m_start" type="date">
+        <label for="m_end">Fecha fin</label>
+        <input class="form-control" id="m_end" type="date">
+        <button id="btn-motivos-load" class="btn-primary" type="button">Buscar</button>
+      </div>
+      <div>
+        <h3>Listado</h3>
+        <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>Fecha</th><th>Usuario</th><th>Tipo</th><th>Descripción</th></tr>
+          </thead>
+          <tbody id="m_table"></tbody>
         </table>
         </div>
       </div>

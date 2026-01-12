@@ -33,6 +33,10 @@
     const qs = new URLSearchParams(params || {}).toString();
     return api('../api/admin.php?action=stats.punctuality' + (qs ? ('&' + qs) : ''));
   }
+  async function motivosList(params){
+    const qs = new URLSearchParams(params || {}).toString();
+    return api('../api/admin.php?action=motivos.list' + (qs ? ('&' + qs) : ''));
+  }
 
   async function usersList(q){
     const url = '../api/admin.php?action=users.list' + (q ? ('&q=' + encodeURIComponent(q)) : '');
@@ -133,6 +137,7 @@
       {id:'users', p:'panel-users', t:'tab-users'},
       {id:'asist', p:'panel-asist', t:'tab-asist'},
       {id:'stats', p:'panel-stats', t:'tab-stats'},
+      {id:'motivos', p:'panel-motivos', t:'tab-motivos'},
       {id:'jornada', p:'panel-jornada', t:'tab-jornada'},
     ];
     panels.forEach(({id:pid,p,t})=>{
@@ -161,6 +166,7 @@
     document.getElementById('tab-users')?.addEventListener('click', (e)=>{ e.preventDefault(); showTab('users'); });
     document.getElementById('tab-asist')?.addEventListener('click', (e)=>{ e.preventDefault(); showTab('asist'); });
     document.getElementById('tab-stats')?.addEventListener('click', (e)=>{ e.preventDefault(); showTab('stats'); });
+    document.getElementById('tab-motivos')?.addEventListener('click', (e)=>{ e.preventDefault(); showTab('motivos'); });
     document.getElementById('tab-jornada')?.addEventListener('click', (e)=>{ e.preventDefault(); showTab('jornada'); });
 
     // Usuarios list + filtros
@@ -295,6 +301,9 @@
       try {
         const rows = await statsPunctuality(params);
         const tb = document.getElementById('s_table'); tb.innerHTML = '';
+        if (!rows || rows.length === 0) {
+          const tr = document.createElement('tr'); tr.innerHTML = '<td colspan="8">No hay registros en el rango</td>'; tb.appendChild(tr); return;
+        }
         rows.forEach(r=>{
           const tr = document.createElement('tr');
           tr.innerHTML = `<td>${r.group}</td><td>${r.on_time}</td><td>${r.late}</td><td>${r.early}</td><td>${r.early_exit}</td><td>${r.overtime}</td><td>${r.avg_entry_diff_min ?? '-'}</td><td>${r.avg_exit_diff_min ?? '-'}</td>`;
@@ -303,6 +312,23 @@
       } catch (e) { alert('No se pudieron calcular estadísticas. Asegura una jornada definida.'); }
     }
     document.getElementById('btn-stats-load')?.addEventListener('click', loadStats);
+    // Motivos
+    async function loadMotivos(){
+      const uid = selectedUser.m?.id || '';
+      const params = { usuario_id: uid, start_date: (document.getElementById('m_start')?.value || ''), end_date: (document.getElementById('m_end')?.value || '') };
+      try {
+        const rows = await motivosList(params);
+        const tb = document.getElementById('m_table'); tb.innerHTML = '';
+        if (!rows || rows.length === 0) { const tr = document.createElement('tr'); tr.innerHTML = '<td colspan="4">Sin motivos registrados</td>'; tb.appendChild(tr); return; }
+        rows.forEach(r=>{
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${r.fecha}</td><td>${r.nombre||r.usuario||r.usuario_id}</td><td>${r.tipo}</td><td>${r.descripcion}</td>`;
+          tb.appendChild(tr);
+        });
+      } catch {}
+    }
+    document.getElementById('btn-motivos-load')?.addEventListener('click', loadMotivos);
+    document.getElementById('btn-open-user-picker-m')?.addEventListener('click', ()=>openPicker('m'));
 
     // Jornada
     async function loadJornada(){

@@ -66,6 +66,21 @@ function ensureJornadasTable(): void {
     $pdo->exec($sql);
 }
 
+function ensureMotivosTable(): void {
+    $pdo = pdo();
+    $sql = "CREATE TABLE IF NOT EXISTS motivos (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        usuario_id INT NOT NULL,
+        fecha DATE NOT NULL,
+        tipo ENUM('llegada_tarde','salida_temprana','salida_tarde','almuerzo_temprano','almuerzo_tarde','otro') NOT NULL,
+        descripcion VARCHAR(500) NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT fk_motivos_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE ON UPDATE CASCADE,
+        INDEX ix_motivos_usuario_fecha (usuario_id, fecha)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+    $pdo->exec($sql);
+}
+
 function currentUser(): ?array {
     if (!isset($_SESSION['uid'])) return null;
     $stmt = pdo()->prepare('SELECT id, nombre, usuario, email, role, created_at FROM usuarios WHERE id = :id');
@@ -94,6 +109,7 @@ try {
     ensureUsersTable();
     ensureAsistenciasTable();
     ensureJornadasTable();
+    ensureMotivosTable();
 
     $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
     $data = json_input();
@@ -317,6 +333,25 @@ try {
         exit;
     }
 
+    // Motivos (admin listado)
+    if ($action === 'motivos.list' && $method === 'GET') {
+        requireAdmin();
+        $uid = isset($_GET['usuario_id']) ? (int)$_GET['usuario_id'] : 0;
+        $start = (string)($_GET['start_date'] ?? '');
+        $end = (string)($_GET['end_date'] ?? '');
+        $sql = 'SELECT m.id, m.usuario_id, u.nombre, u.usuario, m.fecha, m.tipo, m.descripcion, m.created_at
+                FROM motivos m JOIN usuarios u ON u.id = m.usuario_id WHERE 1=1';
+        $params = [];
+        if ($uid) { $sql .= ' AND m.usuario_id = :uid'; $params[':uid'] = $uid; }
+        if ($start !== '') { $sql .= ' AND m.fecha >= :s'; $params[':s'] = $start; }
+        if ($end !== '') { $sql .= ' AND m.fecha <= :e'; $params[':e'] = $end; }
+        $sql .= ' ORDER BY m.fecha DESC, m.created_at DESC';
+        $stmt = pdo()->prepare($sql);
+        $stmt->execute($params);
+        echo json_encode($stmt->fetchAll());
+        exit;
+    }
+
     // Jornadas (configuración por empleado)
     if ($action === 'jornadas.get' && $method === 'GET') {
         requireAdmin();
@@ -364,14 +399,14 @@ try {
         $jornada = $j->fetch(PDO::FETCH_ASSOC);
         if (!$jornada) { http_response_code(409); echo json_encode(['error'=>'no_schedule']); exit; }
 
-        $stmt = pdo()->prepare("SELECT a.fecha,
-                 MIN(CASE WHEN a.accion='entrada' THEN a.hora END) AS primera_entrada,
-                 MAX(CASE WHEN a.accion='salida' THEN a.hora END) AS ultima_salida
-               FROM asistencias a
-               WHERE a.usuario_id = :uid AND a.fecha >= :s AND a.fecha <= :e
-               GROUP BY a.fecha
-               ORDER BY a.fecha");
-        $stmt->execute([':uid'=>$uid, ':s'=>$start, ':e'=>$end]);
+                $stmt = pdo()->prepare("SELECT a.fecha,
+                                 MIN(CASE WHEN a.accion='entrada' THEN a.hora END) AS primera_entrada,
+                                 MAX(CASE WHEN a.accion='salida' THEN a.hora END) AS ultima_salida
+                             FROM asistencias a
+                             WHERE a.usuario_id = :uid AND a.fecha >= :s AND a.fecha <= :e
+                             GROUP BY a.fecha
+                             ORDER BY a.fecha");
+                $stmt->execute([':uid'=>$uid, ':s'=>$start, ':e'=>$end]);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         $tol = (int)($jornada['tolerancia_min'] ?? 5);
@@ -382,14 +417,14 @@ try {
             $s1 = $r['ultima_salida'];
             $entryDiff = null; $exitDiff = null;
             if ($e1) {
-                $q = pdo()->prepare("SELECT TIMESTAMPDIFF(MINUTE, CONCAT(:f,' ', :he), CONCAT(:f,' ', :e1)) AS diff");
-                $q->execute([':f'=>$f, ':he'=>$jornada['hora_entrada'], ':e1'=>$e1]);
+                $q = pdo()->prepare("SELECT TIMESTAMPDIFF(MINUTE, CONCAT(:f1,' ', :he), CONCAT(:f2,' ', :e1)) AS diff");
+                $q->execute([':f1'=>$f, ':he'=>$jornada['hora_entrada'], ':f2'=>$f, ':e1'=>$e1]);
                 $entryDiff = (int)$q->fetchColumn();
             }
             if ($s1) {
-                $q = pdo()->prepare("SELECT TIMESTAMPDIFF(MINUTE, CONCAT(:f,' ', :s1), CONCAT(:f,' ', :hs)) AS diff");
+                $q = pdo()->prepare("SELECT TIMESTAMPDIFF(MINUTE, CONCAT(:f1,' ', :s1), CONCAT(:f2,' ', :hs)) AS diff");
                 // Nota: diff positivo => salida antes de hora_salida? Ajustamos para sentido correcto abajo
-                $q->execute([':f'=>$f, ':s1'=>$s1, ':hs'=>$jornada['hora_salida']]);
+                $q->execute([':f1'=>$f, ':s1'=>$s1, ':f2'=>$f, ':hs'=>$jornada['hora_salida']]);
                 $exitDiff = (int)$q->fetchColumn();
                 // Queremos: positivo => después (overtime), negativo => temprano
                 $exitDiff = -$exitDiff;

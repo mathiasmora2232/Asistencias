@@ -30,6 +30,34 @@ function ensureTables(): void {
         INDEX ix_usuario_fecha (usuario_id, fecha),
         UNIQUE KEY uk_evento_unico (usuario_id, fecha, accion, hora)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    // Tabla de motivos (justificaciones)
+    $pdo->exec("CREATE TABLE IF NOT EXISTS motivos (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        usuario_id INT NOT NULL,
+        fecha DATE NOT NULL,
+        tipo ENUM('llegada_tarde','salida_temprana','salida_tarde','almuerzo_temprano','almuerzo_tarde','otro') NOT NULL,
+        descripcion VARCHAR(500) NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT fk_motivos_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE ON UPDATE CASCADE,
+        INDEX ix_motivos_usuario_fecha (usuario_id, fecha)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    // Tabla de jornadas para validar horarios
+    $pdo->exec("CREATE TABLE IF NOT EXISTS jornadas (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        usuario_id INT NOT NULL,
+        hora_entrada TIME NOT NULL,
+        hora_salida TIME NOT NULL,
+        almuerzo_inicio TIME NULL,
+        almuerzo_fin TIME NULL,
+        tolerancia_min INT NOT NULL DEFAULT 5,
+        horas_extra_inicio TIME NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        CONSTRAINT fk_jornadas_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE ON UPDATE CASCADE,
+        UNIQUE KEY uk_jornada_usuario (usuario_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 }
 
 function json_input(): array {
@@ -73,9 +101,11 @@ try {
         $nombre = trim((string)($data['nombre'] ?? ''));
         $usuario_id = (int)($data['usuario_id'] ?? 0);
         $accion = (string)($data['accion'] ?? 'entrada');
-        $hora = (string)($data['hora'] ?? date('H:i'));
-        $fecha = (string)($data['fecha'] ?? date('Y-m-d'));
+        // Fuerza fecha de hoy y hora del cliente/servidor
+        $hora = (string)date('H:i');
+        $fecha = (string)date('Y-m-d');
         $obs = isset($data['observacion']) ? (string)$data['observacion'] : null;
+        $motivo = isset($data['motivo']) ? trim((string)$data['motivo']) : '';
 
         if (!$usuario_id && $nombre !== '') {
             $usuario_id = findUsuarioIdByNombre($nombre) ?? 0;
@@ -93,6 +123,54 @@ try {
 
         // Normalizar hora a HH:MM:SS
         if (preg_match('/^\d{2}:\d{2}$/', $hora)) { $hora .= ':00'; }
+
+        // No permitir más de una acción por día (independiente de hora)
+        $stmtChk = pdo()->prepare('SELECT COUNT(*) FROM asistencias WHERE usuario_id = ? AND fecha = ? AND accion = ?');
+        $stmtChk->execute([$usuario_id, $fecha, $accion]);
+        if ((int)$stmtChk->fetchColumn() > 0) {
+            http_response_code(409);
+            echo json_encode(['error'=>'duplicate_action_day']);
+            exit;
+        }
+
+        // Validaciones según jornada
+        $stmtJ = pdo()->prepare('SELECT hora_entrada, hora_salida, tolerancia_min FROM jornadas WHERE usuario_id = ?');
+        $stmtJ->execute([$usuario_id]);
+        $j = $stmtJ->fetch(PDO::FETCH_ASSOC);
+        // Si existe jornada, aplicar reglas
+        if ($j) {
+            if ($accion === 'salida') {
+                // Salida temprana: requiere motivo
+                $q = pdo()->prepare("SELECT TIMESTAMPDIFF(MINUTE, CONCAT(:f,' ', :s1), CONCAT(:f,' ', :hs))");
+                $q->execute([':f'=>$fecha, ':s1'=>$hora, ':hs'=>$j['hora_salida']]);
+                $diff = (int)$q->fetchColumn(); // positivo => antes de hora_salida
+                if ($diff > 0 && $motivo === '') {
+                    http_response_code(400);
+                    echo json_encode(['error'=>'reason_required','detail'=>'Salida temprana requiere motivo']);
+                    exit;
+                }
+                if ($diff > 0 && $motivo !== '') {
+                    $insM = pdo()->prepare('INSERT INTO motivos (usuario_id, fecha, tipo, descripcion) VALUES (?, ?, ?, ?)');
+                    $insM->execute([$usuario_id, $fecha, 'salida_temprana', $motivo]);
+                }
+            } elseif ($accion === 'entrada') {
+                // Llegada tarde: requiere motivo si sobrepasa tolerancia
+                $q = pdo()->prepare("SELECT TIMESTAMPDIFF(MINUTE, CONCAT(:f,' ', :he), CONCAT(:f,' ', :e1))");
+                $q->execute([':f'=>$fecha, ':he'=>$j['hora_entrada'], ':e1'=>$hora]);
+                $diff = (int)$q->fetchColumn(); // positivo => llegó tarde
+                $tol = (int)($j['tolerancia_min'] ?? 5);
+                if ($diff > $tol && $motivo === '') {
+                    http_response_code(400);
+                    echo json_encode(['error'=>'reason_required','detail'=>'Llegada tardía requiere motivo']);
+                    exit;
+                }
+                if ($diff > $tol && $motivo !== '') {
+                    $insM = pdo()->prepare('INSERT INTO motivos (usuario_id, fecha, tipo, descripcion) VALUES (?, ?, ?, ?)');
+                    $insM->execute([$usuario_id, $fecha, 'llegada_tarde', $motivo]);
+                }
+            }
+        }
+
         $stmt = pdo()->prepare('INSERT INTO asistencias (usuario_id, fecha, accion, hora, observacion) VALUES (?, ?, ?, ?, ?)');
         try {
             $stmt->execute([$usuario_id, $fecha, $accion, $hora, $obs]);
@@ -106,6 +184,23 @@ try {
                 throw $ex;
             }
         }
+        exit;
+    }
+
+    if ($action === 'motivos.list' && $method === 'GET') {
+        $uid = isset($_GET['usuario_id']) ? (int)$_GET['usuario_id'] : 0;
+        $start = (string)($_GET['start_date'] ?? '');
+        $end = (string)($_GET['end_date'] ?? '');
+        $sql = 'SELECT m.id, m.usuario_id, u.nombre, u.usuario, m.fecha, m.tipo, m.descripcion, m.created_at
+                FROM motivos m JOIN usuarios u ON u.id = m.usuario_id WHERE 1=1';
+        $params = [];
+        if ($uid) { $sql .= ' AND m.usuario_id = ?'; $params[] = $uid; }
+        if ($start !== '') { $sql .= ' AND m.fecha >= ?'; $params[] = $start; }
+        if ($end !== '') { $sql .= ' AND m.fecha <= ?'; $params[] = $end; }
+        $sql .= ' ORDER BY m.fecha DESC, m.created_at DESC';
+        $stmt = pdo()->prepare($sql);
+        $stmt->execute($params);
+        echo json_encode($stmt->fetchAll());
         exit;
     }
 
