@@ -19,12 +19,12 @@
     return data;
   }
 
-  async function registerSimple(usuario, password, role){
+  async function registerSimple(usuario, password, role, email){
     const res = await fetch('../api/register.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'same-origin',
-      body: JSON.stringify({ usuario, password, role })
+      body: JSON.stringify({ usuario, password, role, email })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data?.error || 'register_failed');
@@ -65,6 +65,7 @@
     if (regBtn) {
       regBtn.addEventListener('click', async () => {
         const u = (document.getElementById('reg-usuario')?.value || '').trim();
+        const e = (document.getElementById('reg-email')?.value || '').trim();
         const p = (document.getElementById('reg-password')?.value || '').trim();
         const r = (document.getElementById('reg-role')?.value || 'user');
         if (!u || !p) {
@@ -72,9 +73,9 @@
           return;
         }
         try {
-          await registerSimple(u, p, r);
+          await registerSimple(u, p, r, e);
           if (regMsg) { regMsg.textContent = 'Cuenta creada. Iniciando sesión...'; regMsg.classList.remove('hidden'); }
-          await login(u, p);
+          await login(e || u, p);
           location.href = './dashboard.html';
         } catch (err) {
           const error = String(err && err.message || 'register_failed');
