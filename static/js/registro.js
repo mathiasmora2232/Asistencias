@@ -11,8 +11,10 @@
     const qs = new URLSearchParams({ usuario_id:String(uid), date: fecha });
     return api('../api/asistencias.php?action=list&'+qs.toString());
   }
-  async function add(uid, fecha, hora, accion, observacion){
-    return api('../api/asistencias.php?action=add', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ usuario_id:uid, fecha, hora, accion, observacion }) });
+  async function add(uid, fecha, hora, accion, observacion, motivo){
+    const payload = { usuario_id:uid, fecha, hora, accion, observacion };
+    if (motivo && motivo.trim() !== '') payload.motivo = motivo.trim();
+    return api('../api/asistencias.php?action=add', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
   }
   function fmt2(n){ return String(n).padStart(2,'0'); }
   function today(){ const d = new Date(); return d.getFullYear()+"-"+fmt2(d.getMonth()+1)+"-"+fmt2(d.getDate()); }
@@ -61,7 +63,15 @@
         obsI.value=''; await refresh();
       } catch (err){
         const e = String(err && err.message || 'api_error');
-        if (e === 'duplicate_event') msg.textContent = 'Ya registraste esta acción a esa hora.';
+        if (e === 'duplicate_event' || e === 'duplicate_action_day') msg.textContent = 'Ya registraste esta acción hoy.';
+        else if (e === 'reason_required') {
+          const r = prompt('Se requiere motivo (llegada tarde o salida temprana):');
+          if (r && r.trim() !== '') {
+            try { await add(uid, fechaI.value, horaI.value, accionI.value, obsI.value.trim(), r); msg.textContent='Asistencia registrada con motivo'; msg.classList.remove('hidden'); obsI.value=''; await refresh(); return; }
+            catch (e2) { /* caer al mensaje genérico */ }
+          }
+          msg.textContent = 'Motivo requerido no proporcionado.';
+        }
         else if (e === 'invalid_user') msg.textContent = 'Usuario no válido.';
         else msg.textContent = 'Error al registrar.';
         msg.classList.remove('hidden');

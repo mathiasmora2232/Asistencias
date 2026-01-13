@@ -138,11 +138,11 @@ try {
         $stmtJ->execute([$usuario_id]);
         $j = $stmtJ->fetch(PDO::FETCH_ASSOC);
         // Si existe jornada, aplicar reglas
-        if ($j) {
+            if ($j) {
             if ($accion === 'salida') {
                 // Salida temprana: requiere motivo
-                $q = pdo()->prepare("SELECT TIMESTAMPDIFF(MINUTE, CONCAT(:f,' ', :s1), CONCAT(:f,' ', :hs))");
-                $q->execute([':f'=>$fecha, ':s1'=>$hora, ':hs'=>$j['hora_salida']]);
+                $q = pdo()->prepare("SELECT TIMESTAMPDIFF(MINUTE, CONCAT(:f1,' ', :s1), CONCAT(:f2,' ', :hs))");
+                $q->execute([':f1'=>$fecha, ':s1'=>$hora, ':f2'=>$fecha, ':hs'=>$j['hora_salida']]);
                 $diff = (int)$q->fetchColumn(); // positivo => antes de hora_salida
                 if ($diff > 0 && $motivo === '') {
                     http_response_code(400);
@@ -155,8 +155,8 @@ try {
                 }
             } elseif ($accion === 'entrada') {
                 // Llegada tarde: requiere motivo si sobrepasa tolerancia
-                $q = pdo()->prepare("SELECT TIMESTAMPDIFF(MINUTE, CONCAT(:f,' ', :he), CONCAT(:f,' ', :e1))");
-                $q->execute([':f'=>$fecha, ':he'=>$j['hora_entrada'], ':e1'=>$hora]);
+                $q = pdo()->prepare("SELECT TIMESTAMPDIFF(MINUTE, CONCAT(:f1,' ', :he), CONCAT(:f2,' ', :e1))");
+                $q->execute([':f1'=>$fecha, ':he'=>$j['hora_entrada'], ':f2'=>$fecha, ':e1'=>$hora]);
                 $diff = (int)$q->fetchColumn(); // positivo => llegó tarde
                 $tol = (int)($j['tolerancia_min'] ?? 5);
                 if ($diff > $tol && $motivo === '') {
